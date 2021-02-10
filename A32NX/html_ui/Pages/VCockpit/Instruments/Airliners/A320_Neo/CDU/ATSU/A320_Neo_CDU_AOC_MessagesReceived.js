@@ -1,9 +1,35 @@
+/*
+ * A32NX
+ * Copyright (C) 2020-2021 FlyByWire Simulations and its contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 class CDUAocMessagesReceived {
-    static ShowPage(mcdu, messages = null, offset = 5) {
+    static ShowPage(mcdu, messages = null, page = 0) {
         if (!messages) {
             messages = mcdu.getMessages();
         }
         mcdu.clearDisplay();
+
+        page = Math.min(Math.floor((messages.length - 1) / 5), page);
+
+        mcdu.refreshPageCallback = () => {
+            this.ShowPage(mcdu, null, page);
+        };
+
+        const offset = 5 + page * 5;
 
         const msgTimeHeaders = [];
         msgTimeHeaders.length = 6;
@@ -36,95 +62,37 @@ class CDUAocMessagesReceived {
             ["<RETURN"]
         ]);
 
-        if (messages.length > 4) {
+        let left = false, right = false;
+        if (messages.length > ((page + 1) * 5)) {
             mcdu.onNextPage = () => {
-                if (messages[offset - 1]) {
-                    offset *= 2;
-                }
-                CDUAocMessagesReceived.ShowPage(mcdu, messages, offset);
+                CDUAocMessagesReceived.ShowPage(mcdu, messages, page + 1);
             };
+            right = true;
+        }
+        if (page > 0) {
             mcdu.onPrevPage = () => {
-                if (messages[offset - 1]) {
-                    offset /= 2;
+                CDUAocMessagesReceived.ShowPage(mcdu, messages, page - 1);
+            };
+            left = true;
+        }
+        mcdu.setArrows(false, false, left, right);
+
+        for (let i = 0; i < 5; i++) {
+            mcdu.leftInputDelay[i] = () => {
+                return mcdu.getDelaySwitchPage();
+            };
+
+            mcdu.onLeftInput[i] = (value) => {
+                if (messages[offset - 5 + i]) {
+                    if (value === FMCMainDisplay.clrValue) {
+                        mcdu.deleteMessage(offset - 5 + i);
+                        CDUAocMessagesReceived.ShowPage(mcdu, messages, page);
+                    } else {
+                        CDUAocRequestsMessage.ShowPage(mcdu, messages[offset - 5 + i]);
+                    }
                 }
-                CDUAocMessagesReceived.ShowPage(mcdu, messages, offset);
             };
         }
-
-        mcdu.leftInputDelay[0] = () => {
-            return mcdu.getDelaySwitchPage();
-        };
-
-        mcdu.onLeftInput[0] = (value) => {
-            if (messages[offset - 5]) {
-                if (value === FMCMainDisplay.clrValue) {
-                    mcdu.deleteMessage(offset - 5);
-                    CDUAocMessagesReceived.ShowPage(mcdu, messages, offset);
-                } else {
-                    CDUAocRequestsMessage.ShowPage(mcdu, messages[offset - 5]);
-                }
-            }
-        };
-
-        mcdu.leftInputDelay[1] = () => {
-            return mcdu.getDelaySwitchPage();
-        };
-
-        mcdu.onLeftInput[1] = (value) => {
-            if (messages[offset - 4]) {
-                if (value === FMCMainDisplay.clrValue) {
-                    mcdu.deleteMessage(offset - 4);
-                    CDUAocMessagesReceived.ShowPage(mcdu, messages, offset);
-                } else {
-                    CDUAocRequestsMessage.ShowPage(mcdu, messages[offset - 4]);
-                }
-            }
-        };
-
-        mcdu.leftInputDelay[2] = () => {
-            return mcdu.getDelaySwitchPage();
-        };
-
-        mcdu.onLeftInput[2] = (value) => {
-            if (messages[offset - 3]) {
-                if (value === FMCMainDisplay.clrValue) {
-                    mcdu.deleteMessage(offset - 3);
-                    CDUAocMessagesReceived.ShowPage(mcdu, messages, offset);
-                } else {
-                    CDUAocRequestsMessage.ShowPage(mcdu, messages[offset - 3]);
-                }
-            }
-        };
-
-        mcdu.leftInputDelay[3] = () => {
-            return mcdu.getDelaySwitchPage();
-        };
-
-        mcdu.onLeftInput[3] = (value) => {
-            if (messages[offset - 2]) {
-                if (value === FMCMainDisplay.clrValue) {
-                    mcdu.deleteMessage(offset - 2);
-                    CDUAocMessagesReceived.ShowPage(mcdu, messages, offset);
-                } else {
-                    CDUAocRequestsMessage.ShowPage(mcdu, messages[offset - 2]);
-                }
-            }
-        };
-
-        mcdu.leftInputDelay[4] = () => {
-            return mcdu.getDelaySwitchPage();
-        };
-
-        mcdu.onLeftInput[4] = (value) => {
-            if (messages[offset - 1]) {
-                if (value === FMCMainDisplay.clrValue) {
-                    mcdu.deleteMessage(offset - 1);
-                    CDUAocMessagesReceived.ShowPage(mcdu, messages, offset);
-                } else {
-                    CDUAocRequestsMessage.ShowPage(mcdu, messages[offset - 1]);
-                }
-            }
-        };
 
         mcdu.leftInputDelay[5] = () => {
             return mcdu.getDelaySwitchPage();

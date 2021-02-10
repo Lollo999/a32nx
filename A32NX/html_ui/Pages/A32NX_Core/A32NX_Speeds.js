@@ -14,12 +14,15 @@ class A32NX_Speeds {
         SimVar.SetSimVarValue("L:A32NX_SPEEDS_S", "number", 0);
         SimVar.SetSimVarValue("L:A32NX_SPEEDS_GD", "number", 0);
         SimVar.SetSimVarValue("L:A32NX_SPEEDS_LANDING_CONF3", "boolean", 0);
+        SimVar.SetSimVarValue("L:A32NX_SPEEDS_VMAX", "number", 0);
+        SimVar.SetSimVarValue("L:A32NX_SPEEDS_VFEN", "number", 0);
         this.lastGw = 50;
         this.lastFhi = -1;
         this.curFhi = -1;
         this.ldgPos = -1;
         this.alt = -1;
         this.cgw = 0;
+        this.isTo = false;
 
         /**
          * Fetches aircraft parameter and checks against cached values.
@@ -27,23 +30,36 @@ class A32NX_Speeds {
          */
         setInterval(() => {
             const fp = Simplane.getCurrentFlightPhase();
-            const fhi = Simplane.getFlapsHandleIndex();
+            let fhi = Simplane.getFlapsHandleIndex();
+            /** Using true fhi for comparison */
+            const isTo = fhi === SimVar.GetSimVarValue("L:A32NX_TO_CONFIG_FLAPS", "number");
+            /** Change fhi to differentiate between 1 and 1 + F */
+            if (fhi === 1 && SimVar.GetSimVarValue("TRAILING EDGE FLAPS LEFT ANGLE", "degrees") < 9.99) {
+                fhi = 5;
+            }
             const gw = this.round(SimVar.GetSimVarValue("TOTAL WEIGHT", "kg")) / 1000;
             const ldg = Math.round(SimVar.GetSimVarValue("GEAR POSITION:0", "Enum"));
             const alt = this.round(Simplane.getAltitude());
 
-            if (fhi === this.lastFhi && gw === this.lastGw && ldg === this.ldgPos && alt === this.alt) {
+            if (fhi === this.lastFhi && gw === this.lastGw && ldg === this.ldgPos && alt === this.alt && isTo === this.isTo) {
                 return;
             }
 
-            this.curFhi = this.lastFhi === 0 && fhi === 1 && fp > FlightPhase.FLIGHT_PHASE_TAKEOFF ? 5 : fhi;
+            /** During Take Off allow to change this.isTo
+            * Otherwise if we are in take off config and change the fhi, we no longer are in take off config */
+            if (fp === FlightPhase.FLIGHT_PHASE_TAKEOFF && Simplane.getAltitudeAboveGround() < 1.5) {
+                this.isTo = isTo;
+            } else if (this.isTo && this.lastFhi !== fhi) {
+                this.isTo = false;
+            }
+
             this.lastFhi = fhi;
             this.lastGw = gw;
             this.cgw = Math.ceil(((gw > 80 ? 80 : gw) - 40) / 5);
             this.ldgPos = ldg;
             this.alt = alt;
 
-            const speeds = new NXSpeeds(gw, this.curFhi, ldg, fp < FlightPhase.FLIGHT_PHASE_CLIMB);
+            const speeds = new NXSpeeds(gw, this.lastFhi, ldg, this.isTo);
             speeds.compensateForMachEffect(alt);
 
             SimVar.SetSimVarValue("L:A32NX_SPEEDS_VS", "number", speeds.vs);
@@ -51,6 +67,8 @@ class A32NX_Speeds {
             SimVar.SetSimVarValue("L:A32NX_SPEEDS_F", "number", speeds.f);
             SimVar.SetSimVarValue("L:A32NX_SPEEDS_S", "number", speeds.s);
             SimVar.SetSimVarValue("L:A32NX_SPEEDS_GD", "number", speeds.gd);
+            SimVar.SetSimVarValue("L:A32NX_SPEEDS_VMAX", "number", speeds.vmax);
+            SimVar.SetSimVarValue("L:A32NX_SPEEDS_VFEN", "number", speeds.vfeN);
         }, 500);
     }
 

@@ -49,12 +49,6 @@ class NavSystem extends BaseInstrument {
         this.menuSliderCursor = this.getChildById("SliderMenuCursor");
         this.currFlightPlanManager = new FlightPlanManager(this);
         this.currFlightPlan = new FlightPlan(this, this.currFlightPlanManager);
-        if (typeof g_modDebugMgr != "undefined") {
-            g_modDebugMgr.AddConsole(null);
-        }
-        Include.addScript("/JS/debug.js", function () {
-            g_modDebugMgr.AddConsole(null);
-        });
     }
     disconnectedCallback() {
         super.disconnectedCallback();
@@ -374,11 +368,6 @@ class NavSystem extends BaseInstrument {
                 }
             }
             this.updateAspectRatio();
-            if (this.currFlightPlanManager.isLoadedApproach() && !this.currFlightPlanManager.isActiveApproach() && (this.currFlightPlanManager.getActiveWaypointIndex() == -1 || (this.currFlightPlanManager.getActiveWaypointIndex() > this.currFlightPlanManager.getLastIndexBeforeApproach()))) {
-                if (SimVar.GetSimVarValue("L:FMC_FLIGHT_PLAN_IS_TEMPORARY", "number") != 1) {
-                    this.currFlightPlanManager.tryAutoActivateApproach();
-                }
-            }
             if (this.popUpElement) {
                 this.popUpElement.onUpdate(this.deltaTime);
             }
